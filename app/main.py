@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from app.routers import dashboard, filter, health
@@ -36,6 +37,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", response_class=PlainTextResponse)
+def root() -> str:
+    return "Welcome to Air quality backend"
+
 
 app.include_router(health.router)
 app.include_router(filter.router)
