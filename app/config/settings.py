@@ -9,7 +9,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Urban Better Air Quality Backend"
     PROJECT_DESCRIPTION: str = "Backend for Urban Better Air Quality"
     PROJECT_VERSION: str = "1.0.0"
-    ALLOWED_ORIGINS: list = ["*"]
+    # CORS; override with JSON in .env e.g. ALLOWED_ORIGINS='["https://...","http://localhost:3000"]'
+    ALLOWED_ORIGINS: list[str] = [
+        "https://main.d2dbh91n23oexj.amplifyapp.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
     
     AIRQO_URL: str = "https://api.airqo.net/api/v2/devices"
     AIRQO_GRIDS_SUMMARY_URL: str = (
