@@ -7,7 +7,6 @@ from typing import Any
 import httpx
 
 from app.config.settings import settings
-from app.utils.airqo_client import airqo_get
 from app.utils.http_safe import public_airqo_http_error_message
 from app.repository.llm_summary import (
     CerebrasSettings,
@@ -162,7 +161,8 @@ async def fetch_effective_aqi_ranges(
 ) -> dict[str, Any]:
     url = AIRQO_RECENT_PATH.format(site_id=site_id)
     try:
-        response = await airqo_get(client, url, params={"token": token})
+        response = await client.get(url, params={"token": token})
+        response.raise_for_status()
         body = response.json()
     except (httpx.HTTPError, ValueError, TypeError):
         return _copy_default_aqi_ranges()
@@ -298,8 +298,7 @@ async def stream_insight_sse(
 
     while True:
         try:
-            response = await airqo_get(
-                client,
+            response = await client.get(
                 url,
                 params={
                     "token": token,
@@ -309,6 +308,7 @@ async def stream_insight_sse(
                     "skip": skip,
                 },
             )
+            response.raise_for_status()
             u = response.request.url
             safe = f"{u.scheme}://{u.host}{u.path}"
             print(
