@@ -20,7 +20,7 @@ LLM_QUOTA_MESSAGE = (
     "Daily free LLM quota is used up. It will refresh tomorrow — summary is "
     "unavailable for now."
 )
-LLM_NOT_CONFIGURED = "LLM is not configured (set CEREBRAS_API_KEY in .env)."
+LLM_NOT_CONFIGURED = "LLM is not configured."
 LLM_REQUEST_FAILED = "The summary could not be generated. Please try again later."
 
 
@@ -151,8 +151,8 @@ async def post_cerebras_chat(
             },
             timeout=httpx.Timeout(60.0),
         )
-    except httpx.HTTPError as e:
-        return {"error": f"{LLM_REQUEST_FAILED} ({e!s})"}
+    except httpx.HTTPError:
+        return {"error": LLM_REQUEST_FAILED}
 
     if r.status_code == 429:
         return {"error": LLM_QUOTA_MESSAGE}

@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
 from app.config.settings import settings
+from app.utils.http_safe import public_airqo_http_error_message
 from app.repository.insight import stream_insight_sse, validate_and_format_historical_date_range
 from app.repository.llm_summary import CerebrasSettings
 from app.repository.measurement_formatting import compact_aqi_ranges, round_number
@@ -78,7 +79,7 @@ async def dashboard_cards(site_id: str, request: Request) -> dict[str, Any]:
     except httpx.HTTPError as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to reach AirQo recent measurements API: {e!s}",
+            detail=public_airqo_http_error_message(e),
         ) from e
 
     try:

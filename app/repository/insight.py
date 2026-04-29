@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from app.config.settings import settings
+from app.utils.http_safe import public_airqo_http_error_message
 from app.repository.llm_summary import (
     CerebrasSettings,
     build_summary_context,
@@ -308,12 +309,14 @@ async def stream_insight_sse(
                 },
             )
             response.raise_for_status()
-            # Full URL (includes `token=...`); do not use in production logs as-is
-            print(f"AirQo request: {response.request.method} {response.request.url!s}", flush=True)
-        except httpx.HTTPError as e:
-            yield _format_sse(
-                "error", {"message": f"Failed to reach AirQo historical API: {e!s}"}
+            u = response.request.url
+            safe = f"{u.scheme}://{u.host}{u.path}"
+            print(
+                f"AirQo request: {response.request.method} {safe}",
+                flush=True,
             )
+        except httpx.HTTPError as e:
+            yield _format_sse("error", {"message": public_airqo_http_error_message(e)})
             return
 
         try:
