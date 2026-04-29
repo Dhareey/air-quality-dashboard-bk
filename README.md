@@ -18,6 +18,7 @@ The companion app is a **Next.js** frontend, hosted on **AWS Amplify**; this rep
 - [API overview](#api-overview)
 - [Deployment (AWS) notes](#deployment-aws-notes)
 - [CORS and the browser](#cors-and-the-browser)
+- [Challenges and limitations (AirQo)](#challenges-and-limitations-airqo)
 
 ---
 
@@ -185,6 +186,29 @@ Routers are mounted at the **app root** (no `/api` prefix unless you add one beh
 
 - **CORS** is configured in `app/main.py` from `ALLOWED_ORIGINS`. With `*`, **credentials** are disabled in middleware (Starlette does not allow `Access-Control-Allow-Origin: *` with credentialed fetches).
 - A **Next.js** app on **HTTPS (Amplify)** should call the backend over **HTTPS** (via API Gateway). An **HTTP** `http://<ip>:8000` URL from a page loaded over **HTTPS** is typically blocked as **mixed content**; use the secure API URL from the deployment section above.
+
+---
+
+## Challenges and limitations (AirQo)
+
+The **upstream AirQo HTTP API** is a hard dependency: this backend does not own the data; it proxies and reshapes responses for the dashboard, filter, and insight flows.
+
+**What we have observed in production**
+
+- **Intermittent `401 Unauthorized`** responses even when the same `AIRQO_API_KEY` is valid. Bursts of calls (for example several rapid requests from a single page load, or pagination in the historical endpoint) can make failures more likely.
+- **Asymmetric behaviour** between environments: the same token may appear more stable from a **local** machine than from a **cloud** egress IP (for example EC2), which can make debugging feel like “EC2 is broken” when the issue is upstream.
+- **Not true multi-tenant scale at the AirQo layer**: a single API key and a single outbound IP can be rate-limited or inconsistently validated by AirQo’s load-balanced infrastructure. That shows up in our logs as occasional **`502`** from this service when AirQo rejects a call (for example on `GET /dashboard-cards/{site_id}` or during the insight stream) while other calls in the same session succeed.
+
+**What this backend does to stay safe**
+
+- Client-facing errors use **generic messages** via `app/utils/http_safe.py` so **AirQo tokens are not echoed** in JSON error bodies (never use raw `str(httpx.HTTPError)` in responses; it can include the full request URL with `?token=...`).
+
+**Mitigations to consider (application and operations)**
+
+- **Retries with backoff and jitter** on AirQo `GET` calls for transient `401` / `429` / `5xx` (a few attempts with seconds between tries, not tight loops).
+- **Reduce parallel AirQo traffic** from the frontend where possible (stagger dashboard fetches, or cache filter config client-side for a short TTL).
+- **Short server-side caching** for idempotent reads (for example grid summary or recent measurements per `site_id`) to cut duplicate calls.
+- **Contact AirQo** with timestamps and example request patterns if `401` alternates with `200` for identical requests — that can indicate upstream auth or cache inconsistency rather than a bad key.
 
 ---
 
