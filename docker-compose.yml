@@ -1,0 +1,14 @@
+name: air_quality_bk
+
+services:
+  api:
+    build: .
+    image: air_quality_bk:local
+    container_name: air_quality_bk_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
